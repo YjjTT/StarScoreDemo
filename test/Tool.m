@@ -1,44 +1,38 @@
-# StarScoreDemo
-支持小数和富文本的星星评分,目前不支持点击,只支持显示
+//
+//  Tool.m
+//  test
+//
+//  Created by YjjTT on 2018/9/13.
+//  Copyright © 2018年 YjjTT. All rights reserved.
+//
 
-## 绘制支持小数的星星
+#import "Tool.h"
+#import <UIKit/UIKit.h>
+#import "TurnViewToImage.h"
 
-- UIBezierPath绘制图形
+#define EMOJI     @{@"[黄星]":@"fillStar",@"[灰星]":@"emptyStar"}
 
-```objective-c
-UIBezierPath *holePath = [UIBezierPath bezierPathWithRect:CGRectMake(0, 0, grayIV.bounds.size.width*decimal, grayIV.bounds.size.height)];
-        CAShapeLayer *maskLayer = [CAShapeLayer layer];
-        [maskLayer setFillRule:kCAFillRuleEvenOdd];
-        maskLayer.path = holePath.CGPath;
-```
-
-## 富文本显示星星
-
-- 使用正则表达式遍历字符串取出`[…]`的字符串
-
-```objective-c
-NSString *pattern = @"\\[[0-9a-zA-Z\\u4e00-\\u9fa5\\d*(\\.\\d*)?)[M|G]B]+\\]";
-```
-
-- 使用NSRegularExpression遍历字符串将符合规则的字符串加入数组中
-
-```objective-c
-NSRegularExpression *regular = [[NSRegularExpression alloc]initWithPattern:pattern options:NSRegularExpressionCaseInsensitive error:nil];
+@implementation Tool
++ (NSMutableAttributedString *)replaceStringToAttributedString:(NSString *)replaceString{
+    NSMutableAttributedString *attr = [[NSMutableAttributedString alloc]initWithString:replaceString attributes:@{NSFontAttributeName:[UIFont fontWithName:@"PingFangSC-Regular" size:16.0f],NSForegroundColorAttributeName:[UIColor blackColor]}];
+    //使用正则表达式遍历字符串取出格式为 "[...]" 的字符串
+    NSString *pattern = @"\\[[0-9a-zA-Z\\u4e00-\\u9fa5\\d*(\\.\\d*)?)[M|G]B]+\\]";
+    NSRegularExpression *regular = [[NSRegularExpression alloc]initWithPattern:pattern options:NSRegularExpressionCaseInsensitive error:nil];
     NSArray *arr = [regular matchesInString:attr.string options:NSMatchingReportProgress range:NSMakeRange(0, attr.string.length)];
-```
-
-- NSTextCheckingResult遍历数组, 如果字符串可以直接转换成图片,则直接转换,不需要绘制,否则则转换成float浮点数绘制小星星
-
-```objective-c
-for (NSTextCheckingResult *result in arr) {
+    NSMutableArray *imageArr = [NSMutableArray arrayWithCapacity:0];
+    NSMutableArray *rangeArr = [NSMutableArray arrayWithCapacity:0];
+    for (NSTextCheckingResult *result in arr) {
         NSString *matchstring = [attr.string substringWithRange:result.range];
+        //将遍历出来的表情文字转化为表情富文本
         NSTextAttachment *attachment = [[NSTextAttachment alloc]init];
         if ([[EMOJI allKeys] containsObject:matchstring]) {
             attachment.image = [UIImage imageNamed:EMOJI[matchstring]];
+            //设置表情图片大小
             attachment.bounds = CGRectMake(0, -2.0, 16.0, 16.0);
             [imageArr insertObject:attachment atIndex:0];
             [rangeArr insertObject:result atIndex:0];
         }else{
+            // 绘制星星 性能太低 有待调整
             NSRange startRange = [matchstring rangeOfString:@"["];
             NSRange endRange = [matchstring rangeOfString:@"]"];
             NSRange range = NSMakeRange(startRange.location + startRange.length, endRange.location - startRange.location - startRange.length);
@@ -51,30 +45,13 @@ for (NSTextCheckingResult *result in arr) {
             [rangeArr insertObject:result atIndex:0];
         }
     }
-```
-
-- 替换表情富文本
-
-```objective-c
- for (NSTextCheckingResult *result in rangeArr) {
+    int i = 0;
+    //替换表情富文本
+    for (NSTextCheckingResult *result in rangeArr) {
         NSTextAttachment *attchment = imageArr[i];
         [attr replaceCharactersInRange:result.range withAttributedString:[NSAttributedString attributedStringWithAttachment:attchment]];
+        i++;
     }
-```
-
-## 最后的效果
-
-![绘制小星星](https://github.com/YjjTT/ImageFile/raw/master/img/20180913173405.png)
-
-![富文本](https://github.com/YjjTT/ImageFile/raw/master/img/20180913173347.png)
-
-------
-
-## 小结
-
-喜欢的给个star,感谢!
-
-
-
-
-
+    return attr;
+}
+@end
